@@ -41,6 +41,8 @@
       width: 100%;
       height: 100%;
       z-index: -1;
+      will-change: transform;
+      transform: translateZ(0);
     }
 
     /* Animated Grid Background */
@@ -480,6 +482,47 @@
       .social-card {
         padding: 40px 30px;
       }
+
+      /* Reduce orb effects on mobile */
+      .orb {
+        opacity: 0.2;
+        animation: none;
+      }
+
+      .orb-1 {
+        width: 150px;
+        height: 150px;
+      }
+
+      .orb-2 {
+        width: 200px;
+        height: 200px;
+      }
+
+      .orb-3 {
+        width: 120px;
+        height: 120px;
+      }
+
+      /* Simplify grid animation on mobile */
+      .grid-bg {
+        animation: none;
+        opacity: 0.5;
+      }
+
+      /* Reduce logo animation on mobile */
+      .logo {
+        animation: none;
+      }
+
+      .logo-text {
+        animation: gradientFlow 8s ease infinite;
+      }
+
+      /* Hide scroll indicator on mobile */
+      .scroll-indicator {
+        display: none;
+      }
     }
 
     /* Floating Orbs */
@@ -490,6 +533,8 @@
       opacity: 0.4;
       pointer-events: none;
       z-index: -1;
+      will-change: transform;
+      transform: translateZ(0);
     }
 
     .orb-1 {
@@ -619,7 +664,10 @@
   </div>
 
   <script>
-    // Particle Animation
+    // Mobile detection
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    
+    // Particle Animation - Optimize for mobile
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -627,7 +675,8 @@
     canvas.height = window.innerHeight;
 
     const particles = [];
-    const particleCount = 100;
+    // Reduce particles on mobile for performance
+    const particleCount = isMobile ? 30 : 80;
 
     class Particle {
       constructor() {
@@ -656,6 +705,7 @@
     }
 
     function init() {
+      particles.length = 0; // Clear existing particles
       for (let i = 0; i < particleCount; i++) {
         particles.push(new Particle());
       }
@@ -668,18 +718,21 @@
         particles[i].update();
         particles[i].draw();
 
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
+        // Skip line drawing on mobile for better performance
+        if (!isMobile) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-          if (distance < 100) {
-            ctx.strokeStyle = `rgba(0, 255, 136, ${0.2 * (1 - distance / 100)})`;
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.stroke();
+            if (distance < 100) {
+              ctx.strokeStyle = `rgba(0, 255, 136, ${0.2 * (1 - distance / 100)})`;
+              ctx.lineWidth = 0.5;
+              ctx.beginPath();
+              ctx.moveTo(particles[i].x, particles[i].y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.stroke();
+            }
           }
         }
       }
@@ -687,35 +740,48 @@
       requestAnimationFrame(animate);
     }
 
+    // Throttle resize event to prevent infinite loops on mobile
+    let resizeTimeout;
     window.addEventListener('resize', () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        init(); // Reinitialize particles with new dimensions
+      }, 250);
     });
 
     init();
     animate();
 
-    // Mouse follow effect
-    document.addEventListener('mousemove', (e) => {
-      const orb1 = document.querySelector('.orb-1');
-      const orb2 = document.querySelector('.orb-2');
-      const orb3 = document.querySelector('.orb-3');
-      
-      const x = e.clientX / window.innerWidth;
-      const y = e.clientY / window.innerHeight;
-      
-      orb1.style.transform = `translate(${x * 50}px, ${y * 50}px)`;
-      orb2.style.transform = `translate(${-x * 30}px, ${-y * 30}px)`;
-      orb3.style.transform = `translate(${x * 40}px, ${-y * 40}px)`;
-    });
+    // Mouse follow effect - Only on desktop
+    if (!isMobile) {
+      document.addEventListener('mousemove', (e) => {
+        const orb1 = document.querySelector('.orb-1');
+        const orb2 = document.querySelector('.orb-2');
+        const orb3 = document.querySelector('.orb-3');
+        
+        if (orb1 && orb2 && orb3) {
+          const x = e.clientX / window.innerWidth;
+          const y = e.clientY / window.innerHeight;
+          
+          orb1.style.transform = `translate(${x * 50}px, ${y * 50}px)`;
+          orb2.style.transform = `translate(${-x * 30}px, ${-y * 30}px)`;
+          orb3.style.transform = `translate(${x * 40}px, ${-y * 40}px)`;
+        }
+      });
+    }
 
     // Smooth scroll
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
       anchor.addEventListener('click', function (e) {
         e.preventDefault();
-        document.querySelector(this.getAttribute('href')).scrollIntoView({
-          behavior: 'smooth'
-        });
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth'
+          });
+        }
       });
     });
   </script>
